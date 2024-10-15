@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JBay</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        #product-list, #notification-box { margin: 20px 0; }
+        .product, .notification { border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; }
+        #inbox { cursor: pointer; display: inline-block; padding: 5px; border: 1px solid #000; }
+        #notification-dropdown { display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 10px; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database.js"></script>
+</head>
+<body>
+
+    <h1>JBay</h1>
+    <div>
+        <span id="inbox">Inbox</span>
+        <div id="notification-dropdown"></div>
+    </div>
+
+    <h2>List a Product</h2>
+    <input type="text" id="product-name" placeholder="Product Name">
+    <input type="text" id="seller-name" placeholder="Seller Name">
+    <input type="number" id="price" placeholder="Price (JB)">
+    <select id="category">
+        <option value="Candy and Food">Candy and Food</option>
+        <option value="Goods and Services">Goods and Services</option>
+    </select>
+    <button onclick="submitProduct()">Submit</button>
+
+    <div id="product-list"></div>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyB-53rEpdsaz8nkEkyjCTs8Srluoknu0ms",
+          authDomain: "jbay-85265.firebaseapp.com",
+          projectId: "jbay-85265",
+          storageBucket: "jbay-85265.appspot.com",
+          messagingSenderId: "353941111639",
+          appId: "1:353941111639:web:d007182a1860df5841b412",
+          measurementId: "G-V62SN9KHJ9"
+        };
+
+        const app = firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let uid = Math.floor(Math.random() * 9000000) + 1000000; // Generates a random UID
+        const notifications = [];
+
+        document.getElementById('inbox').onclick = function() {
+            const dropdown = document.getElementById('notification-dropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+            dropdown.innerHTML = notifications.map(n => `<div class="notification">${n}</div>`).join('');
+        };
+
+        function submitProduct() {
+            const name = document.getElementById('product-name').value;
+            const seller = document.getElementById('seller-name').value;
+            const price = document.getElementById('price').value;
+            const category = document.getElementById('category').value;
+
+            const newProductRef = db.ref('products').push();
+            newProductRef.set({ name, seller, price, category });
+
+            document.getElementById('product-name').value = '';
+            document.getElementById('seller-name').value = '';
+            document.getElementById('price').value = '';
+
+            loadProducts();
+        }
+
+        function loadProducts() {
+            db.ref('products').once('value').then(snapshot => {
+                const productList = document.getElementById('product-list');
+                productList.innerHTML = '';
+                snapshot.forEach(childSnapshot => {
+                    const product = childSnapshot.val();
+                    productList.innerHTML += `
+                        <div class="product" onclick="viewProduct('${childSnapshot.key}')">
+                            <strong>${product.name}</strong><br>
+                            Price: ${product.price} JB<br>
+                            Seller: ${product.seller}<br>
+                            <em>Click for info</em>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        function viewProduct(productId) {
+            db.ref('products/' + productId).once('value').then(snapshot => {
+                const product = snapshot.val();
+                const confirmation = confirm(`ARE YOU SURE?\n\n${product.name}\nPrice: ${product.price} JB\nSeller: ${product.seller}`);
+                if (confirmation) {
+                    notifications.push(`Your product "${product.name}" has been purchased!`);
+                    loadProducts();
+                }
+            });
+        }
+
+        window.onload = loadProducts;
+    </script>
+</body>
+</html>
